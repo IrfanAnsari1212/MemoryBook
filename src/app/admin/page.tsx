@@ -15,12 +15,14 @@ export default async function DashboardPage() {
   const draft = count("DRAFT");
   const archived = count("ARCHIVED");
   const total = published + draft + archived;
+  const pageCount = await getDb().memoryPage.count({ where: { book: { ownerId: user.id } } });
 
   const stats = [
-    { label: "Total memory books", value: total },
+    { label: "Total Books", value: total },
     { label: "Published", value: published },
-    { label: "Drafts", value: draft },
+    { label: "Draft", value: draft },
     { label: "Archived", value: archived },
+    { label: "Total Pages", value: pageCount },
   ];
 
   return (
@@ -38,7 +40,7 @@ export default async function DashboardPage() {
           </Link>
         </section>
       ) : (
-        <section aria-label="Statistics" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <section aria-label="Statistics" className="grid grid-cols-2 gap-4 lg:grid-cols-5">
           {stats.map((s) => (
             <div key={s.label} className="rounded-2xl border border-slate-200 bg-white p-5">
               <div className="text-sm text-slate-500">{s.label}</div>

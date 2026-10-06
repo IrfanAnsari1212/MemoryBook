@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/session";
-import { ComingSoon } from "@/components/admin/coming-soon";
+import { BookForm } from "@/components/admin/book-form";
 
 export const metadata: Metadata = { title: "New Memory Book" };
 
 export default async function NewBookPage() {
   await requireAdmin();
-  return <ComingSoon title="Create Memory Book" module={3} />;
+  return (
+    <div className="mx-auto max-w-3xl space-y-6">
+      <h1 className="text-2xl font-semibold">Create Memory Book</h1>
+      <BookForm mode="create" cancelHref="/admin/books" />
+    </div>
+  );
 }
