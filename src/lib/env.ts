@@ -14,6 +14,12 @@ const serverSchema = z.object({
   CLOUDINARY_CLOUD_NAME: optional(z.string()),
   CLOUDINARY_API_KEY: optional(z.string()),
   CLOUDINARY_API_SECRET: optional(z.string()),
+}).superRefine((env, ctx) => {
+  // Cloudinary is all-or-nothing: a half-configured storage account fails fast.
+  const keys = ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"] as const;
+  if (keys.some((k) => env[k]) && !keys.every((k) => env[k])) {
+    for (const k of keys) if (!env[k]) ctx.addIssue({ code: "custom", path: [k], message: "Required when any CLOUDINARY_* variable is set" });
+  }
 });
 
 export type Env = z.infer<typeof serverSchema>;

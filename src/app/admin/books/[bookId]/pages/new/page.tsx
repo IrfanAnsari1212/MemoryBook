@@ -15,7 +15,7 @@ export default async function NewPagePage({ params, searchParams }: PageProps<"/
     where: { bookId: book.id, type: "IMAGE" },
     orderBy: { createdAt: "desc" },
     take: 200,
-    select: { id: true, url: true, alt: true },
+    select: { id: true, url: true, alt: true, originalFilename: true, width: true, height: true },
   });
   const t = pageTypeSchema.safeParse((await searchParams).type);
 

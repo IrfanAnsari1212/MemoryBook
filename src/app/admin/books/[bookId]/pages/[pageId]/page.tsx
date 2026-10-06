@@ -19,7 +19,7 @@ export default async function PageDetailPage({ params }: PageProps<"/admin/books
   const def = PAGE_TYPES[page.type];
   const { signature } = readConfig(page.type, page.config);
   const media = page.mediaId
-    ? await getDb().media.findFirst({ where: { id: page.mediaId, bookId: page.bookId }, select: { url: true, alt: true } })
+    ? await getDb().media.findFirst({ where: { id: page.mediaId, bookId: page.bookId }, select: { url: true, alt: true, caption: true, originalFilename: true } })
     : null;
 
   return (
@@ -41,7 +41,7 @@ export default async function PageDetailPage({ params }: PageProps<"/admin/books
         {page.subtitle && <p className="break-words text-slate-500">{page.subtitle}</p>}
         {media && (
           <div className="relative mx-auto aspect-[4/3] w-full max-w-sm overflow-hidden rounded-xl">
-            <Image src={media.url} alt={media.alt ?? ""} fill sizes="384px" className="object-cover" />
+            <Image src={media.url} alt={media.alt || media.caption || page.caption || page.title || media.originalFilename || "Page image"} fill sizes="384px" className="object-cover" />
           </div>
         )}
         {page.caption && <p className="text-center text-sm italic text-slate-500">{page.caption}</p>}

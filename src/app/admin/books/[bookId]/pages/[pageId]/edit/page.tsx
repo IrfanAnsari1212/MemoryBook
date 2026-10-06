@@ -16,7 +16,7 @@ export default async function EditPagePage({ params }: PageProps<"/admin/books/[
     where: { bookId: page.bookId, type: "IMAGE" },
     orderBy: { createdAt: "desc" },
     take: 200,
-    select: { id: true, url: true, alt: true },
+    select: { id: true, url: true, alt: true, originalFilename: true, width: true, height: true },
   });
 
   return (

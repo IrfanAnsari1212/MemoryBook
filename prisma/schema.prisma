@@ -102,8 +102,8 @@ model MemoryBook {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
-  owner      User        @relation(fields: [ownerId], references: [id], onDelete: Restrict)
-  theme      Theme?      @relation(fields: [themeId], references: [id], onDelete: SetNull)
+  owner      User         @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  theme      Theme?       @relation(fields: [themeId], references: [id], onDelete: SetNull)
   music      Music?
   pages      MemoryPage[]
   media      Media[]
@@ -115,26 +115,26 @@ model MemoryBook {
 }
 
 model MemoryPage {
-  id          String         @id @default(cuid())
-  bookId      String
-  order       Int
-  type        PageType       @default(TEXT)
-  title       String?
-  subtitle    String?
-  body        String?
-  caption     String?
-  mediaId     String?
-  layout      PageLayout     @default(DEFAULT)
-  alignment   PageAlignment  @default(CENTER)
-  transition  TransitionType @default(PAGE_TURN)
-  published   Boolean        @default(true)
+  id         String         @id @default(cuid())
+  bookId     String
+  order      Int
+  type       PageType       @default(TEXT)
+  title      String?
+  subtitle   String?
+  body       String?
+  caption    String?
+  mediaId    String?
+  layout     PageLayout     @default(DEFAULT)
+  alignment  PageAlignment  @default(CENTER)
+  transition TransitionType @default(PAGE_TURN)
+  published  Boolean        @default(true)
 
   // Photo presentation (used when mediaId is set)
   photoLayout    PhotoLayout @default(FLOATING_BUBBLE)
-  photoPosition  String?     // e.g. "top-right"; interpreted by the renderer
-  photoSize      Int?        // percent of viewport width
-  photoRotation  Float?      // degrees
-  photoAnimation String?     // e.g. "float"
+  photoPosition  String? // e.g. "top-right"; interpreted by the renderer
+  photoSize      Int? // percent of viewport width
+  photoRotation  Float? // degrees
+  photoAnimation String? // e.g. "float"
   photoDelayMs   Int?
 
   // Escape hatch for type-specific settings added later.
@@ -152,19 +152,22 @@ model MemoryPage {
 }
 
 model Media {
-  id           String    @id @default(cuid())
-  bookId       String
-  type         MediaType @default(IMAGE)
-  url          String
-  publicId     String    // storage provider object id
-  thumbnailUrl String?
-  width        Int?
-  height       Int?
-  bytes        Int?
-  mimeType     String?
-  alt          String?
-  caption      String?
-  createdAt    DateTime  @default(now())
+  id               String    @id @default(cuid())
+  bookId           String
+  type             MediaType @default(IMAGE)
+  url              String
+  publicId         String // storage provider object id
+  thumbnailUrl     String?
+  width            Int?
+  height           Int?
+  bytes            Int?
+  mimeType         String?
+  format           String? // cloudinary format, e.g. "jpg"
+  originalFilename String? // display only; never used as a storage key
+  alt              String?
+  caption          String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @default(now()) @updatedAt
 
   book  MemoryBook   @relation(fields: [bookId], references: [id], onDelete: Cascade)
   pages MemoryPage[]
@@ -176,7 +179,7 @@ model Media {
 
 model Theme {
   id          String   @id @default(cuid())
-  ownerId     String?  // null = built-in preset available to everyone
+  ownerId     String? // null = built-in preset available to everyone
   name        String
   isPreset    Boolean  @default(false)
   background  String
@@ -185,8 +188,8 @@ model Theme {
   card        String
   headingFont String
   bodyFont    String
-  accentFont  String?  // handwritten accents
-  config      Json?    // extra visual configuration
+  accentFont  String? // handwritten accents
+  config      Json? // extra visual configuration
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

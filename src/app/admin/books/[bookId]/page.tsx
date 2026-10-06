@@ -16,7 +16,6 @@ import {
 export const metadata: Metadata = { title: "Memory Book" };
 
 const LATER = [
-  { label: "Media", module: 5 },
   { label: "Preview", module: 6 },
   { label: "Share", module: 9 },
 ];
@@ -93,6 +92,7 @@ export default async function BookDetailPage({ params }: PageProps<"/admin/books
           <div className="flex flex-wrap gap-2">
             <Link href={`/admin/books/${book.id}/pages/new`} className={btnPrimary}>Add Page</Link>
             <Link href={`/admin/books/${book.id}/pages`} className={btnSecondary}>Manage Pages</Link>
+            <Link href={`/admin/books/${book.id}/media`} className={btnSecondary}>Media Library</Link>
           </div>
         </div>
         {firstPages.length > 0 && (
