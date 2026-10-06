@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────── Enums ─────────────
+
+enum Role {
+  OWNER
+  ADMIN
+}
+
+enum Visibility {
+  PRIVATE
+  UNLISTED
+  PUBLIC
+}
+
+enum BookStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+// Add new page types here + register a renderer; no other schema change needed.
+enum PageType {
+  TEXT
+  MEMORY
+  PHOTO
+  LETTER
+  FINAL
+}
+
+enum PageLayout {
+  DEFAULT
+  CENTERED
+  SPLIT
+  FULLSCREEN
+}
+
+enum PageAlignment {
+  LEFT
+  CENTER
+  RIGHT
+}
+
+enum TransitionType {
+  FADE
+  SLIDE
+  PAGE_TURN
+  BLUR
+  ZOOM
+}
+
+enum PhotoLayout {
+  FLOATING_BUBBLE
+  POLAROID
+  CIRCLE
+  FULLSCREEN
+  STACKED
+}
+
+enum MediaType {
+  IMAGE
+  AUDIO
+}
+
+// ───────────── Models ─────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String
+  role         Role     @default(OWNER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  books  MemoryBook[]
+  themes Theme[]
+}
+
+model MemoryBook {
+  id            String     @id @default(cuid())
+  ownerId       String
+  title         String
+  recipientName String
+  senderName    String
+  occasion      String
+  date          DateTime?
+  slug          String     @unique
+  coverTitle    String
+  coverSubtitle String?
+  visibility    Visibility @default(UNLISTED)
+  status        BookStatus @default(DRAFT)
+  themeId       String?
+  publishedAt   DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  owner      User        @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  theme      Theme?      @relation(fields: [themeId], references: [id], onDelete: SetNull)
+  music      Music?
+  pages      MemoryPage[]
+  media      Media[]
+  shareLinks ShareLink[]
+
+  @@index([ownerId, status])
+  @@index([status, visibility])
+  @@index([themeId])
+}
+
+model MemoryPage {
+  id          String         @id @default(cuid())
+  bookId      String
+  order       Int
+  type        PageType       @default(TEXT)
+  title       String?
+  subtitle    String?
+  body        String?
+  caption     String?
+  mediaId     String?
+  layout      PageLayout     @default(DEFAULT)
+  alignment   PageAlignment  @default(CENTER)
+  transition  TransitionType @default(PAGE_TURN)
+  published   Boolean        @default(true)
+
+  // Photo presentation (used when mediaId is set)
+  photoLayout    PhotoLayout @default(FLOATING_BUBBLE)
+  photoPosition  String?     // e.g. "top-right"; interpreted by the renderer
+  photoSize      Int?        // percent of viewport width
+  photoRotation  Float?      // degrees
+  photoAnimation String?     // e.g. "float"
+  photoDelayMs   Int?
+
+  // Escape hatch for type-specific settings added later.
+  config Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  book  MemoryBook @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  media Media?     @relation(fields: [mediaId], references: [id], onDelete: SetNull)
+
+  // Reorders must shift orders in a transaction (or use gaps) to respect this.
+  @@unique([bookId, order])
+  @@index([mediaId])
+}
+
+model Media {
+  id           String    @id @default(cuid())
+  bookId       String
+  type         MediaType @default(IMAGE)
+  url          String
+  publicId     String    // storage provider object id
+  thumbnailUrl String?
+  width        Int?
+  height       Int?
+  bytes        Int?
+  mimeType     String?
+  alt          String?
+  caption      String?
+  createdAt    DateTime  @default(now())
+
+  book  MemoryBook   @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  pages MemoryPage[]
+  music Music[]
+
+  @@unique([bookId, publicId])
+  @@index([bookId, createdAt])
+}
+
+model Theme {
+  id          String   @id @default(cuid())
+  ownerId     String?  // null = built-in preset available to everyone
+  name        String
+  isPreset    Boolean  @default(false)
+  background  String
+  foreground  String
+  accent      String
+  card        String
+  headingFont String
+  bodyFont    String
+  accentFont  String?  // handwritten accents
+  config      Json?    // extra visual configuration
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner User?        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  books MemoryBook[]
+
+  @@unique([ownerId, name])
+  @@index([isPreset])
+}
+
+model Music {
+  id        String   @id @default(cuid())
+  bookId    String   @unique
+  name      String
+  url       String
+  mediaId   String?
+  enabled   Boolean  @default(true)
+  volume    Float    @default(0.5) // 0..1
+  loop      Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  book  MemoryBook @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  media Media?     @relation(fields: [mediaId], references: [id], onDelete: SetNull)
+
+  @@index([mediaId])
+}
+
+model ShareLink {
+  id        String    @id @default(cuid())
+  bookId    String
+  token     String    @unique // high-entropy random, generated server-side
+  active    Boolean   @default(true)
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  book MemoryBook @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([bookId, active])
+}
