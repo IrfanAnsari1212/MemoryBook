@@ -10,6 +10,7 @@ import { assignBookThemeAction } from "@/actions/themes";
 import { SOFT_BLUSH } from "@/lib/themes/defaults";
 import { Visibility } from "@/generated/prisma/enums";
 import { buildChecklist } from "@/lib/books/checklist";
+import { DeleteBookButton } from "@/components/admin/delete-book-button";
 import { ArchiveButton } from "@/components/admin/archive-button";
 import { StatusActionButton } from "@/components/admin/status-form";
 import {
@@ -240,6 +241,21 @@ export default async function BookDetailPage({ params }: PageProps<"/admin/books
         </form>
       </section>
 
+
+      <section aria-label="Danger zone" className="rounded-2xl border border-red-200 bg-red-50/40 p-5 md:p-6">
+        <h2 className="text-base font-semibold text-red-800">Danger zone</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Archiving hides a book and can be undone. Deleting permanently removes the book, its pages, images, music and share links for good.
+        </p>
+        <div className="mt-4">
+          <DeleteBookButton
+            bookId={book.id}
+            title={book.title}
+            published={book.status === "PUBLISHED"}
+            counts={{ pages: total, media: images, music: !!music, links: activeLinks }}
+          />
+        </div>
+      </section>
     </div>
   );
 }

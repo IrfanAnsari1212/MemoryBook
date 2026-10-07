@@ -101,3 +101,32 @@ export const cloudinaryAudioStorage: AudioStorage = {
     throw new Error("destroy failed");
   },
 };
+
+/**
+ * Bulk cleanup used by permanent book deletion. Callers pass ids/prefixes already scoped to one book
+ * (see lib/books/delete.ts). A missing asset counts as success so a retry after a partial failure is safe.
+ */
+export const cloudinaryBookCleanup = {
+  async deleteAssets(resourceType: "image" | "video", publicIds: string[]) {
+    for (let i = 0; i < publicIds.length; i += 100) {
+      const res = await sdk().api.delete_resources(publicIds.slice(i, i + 100), { resource_type: resourceType, type: "upload", invalidate: true });
+      for (const v of Object.values(res.deleted ?? {})) if (v !== "deleted" && v !== "not_found") throw new Error("delete failed");
+    }
+  },
+  /** `prefix` must end with a slash so it can never match a sibling folder (for example another book's id). */
+  async sweepFolder(prefix: string) {
+    if (!prefix.startsWith("memoryletter/books/") || !prefix.endsWith("/")) throw new Error("refusing unscoped prefix");
+    for (const resourceType of ["image", "video"] as const) {
+      let done = false;
+      for (let i = 0; i < 20 && !done; i++) {
+        const r = await sdk().api.delete_resources_by_prefix(prefix, { resource_type: resourceType, type: "upload", invalidate: true });
+        done = !r.partial;
+      }
+      if (!done) throw new Error("sweep incomplete");
+    }
+    // Empty folders are cosmetic: best effort, never an error.
+    for (const f of [`${prefix}music`, prefix.slice(0, -1)]) {
+      try { await sdk().api.delete_folder(f); } catch { /* ignore */ }
+    }
+  },
+};

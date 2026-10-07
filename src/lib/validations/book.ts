@@ -62,3 +62,9 @@ export type BookInput = z.infer<typeof bookInputSchema>;
 
 export const setStatusSchema = z.object({ bookId: idSchema, status: bookStatusSchema });
 export const setVisibilitySchema = z.object({ bookId: idSchema, visibility: visibilitySchema });
+
+/** Permanent deletion: the id plus the book name typed by the user. The owner is never part of the input. */
+export const deleteBookSchema = z.object({
+  bookId: idSchema,
+  confirmTitle: z.string().min(1, "Type the book name to confirm.").max(200),
+});

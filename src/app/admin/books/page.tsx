@@ -29,7 +29,9 @@ const WHERE: Record<FilterKey, Prisma.MemoryBookWhereInput> = {
 
 export default async function BooksPage({ searchParams }: PageProps<"/admin/books">) {
   const user = await requireAdmin();
-  const raw = (await searchParams).status;
+  const sp = await searchParams;
+  const raw = sp.status;
+  const justDeleted = sp.deleted === "1"; // cosmetic flash only; deletion itself is a server action
   const filter: FilterKey = FILTERS.some((f) => f.key === raw) ? (raw as FilterKey) : "active";
 
   const books = await getDb().memoryBook.findMany({
@@ -50,6 +52,10 @@ export default async function BooksPage({ searchParams }: PageProps<"/admin/book
           Create Memory Book
         </Link>
       </div>
+
+      {justDeleted && (
+        <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">Book permanently deleted.</p>
+      )}
 
       <nav aria-label="Filter by status" className="flex gap-1 overflow-x-auto">
         {FILTERS.map((f) => (
