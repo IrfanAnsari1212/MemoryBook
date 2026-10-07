@@ -6,6 +6,8 @@ import { PageTypeBadge, PagePublishedBadge } from "@/components/admin/page-ui";
 import { getOwnedBookOrNotFound } from "@/lib/books";
 import { formatDate, formatDateTime } from "@/lib/utils/format";
 import { setBookVisibilityAction } from "@/actions/books";
+import { assignBookThemeAction } from "@/actions/themes";
+import { SOFT_BLUSH } from "@/lib/themes/defaults";
 import { Visibility } from "@/generated/prisma/enums";
 import { ArchiveButton } from "@/components/admin/archive-button";
 import { StatusActionButton } from "@/components/admin/status-form";
@@ -34,6 +36,12 @@ export default async function BookDetailPage({ params }: PageProps<"/admin/books
       select: { id: true, order: true, type: true, title: true, published: true },
     }),
   ]);
+
+  const themes = await getDb().theme.findMany({
+    where: { OR: [{ ownerId: user.id }, { ownerId: null, isPreset: true }] },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
 
   const rows: Array<[string, string]> = [
     ["Recipient", book.recipientName],
@@ -131,6 +139,25 @@ export default async function BookDetailPage({ params }: PageProps<"/admin/books
             ))}
           </select>
           <button type="submit" className={btnSecondary}>Update visibility</button>
+        </form>
+      </section>
+
+      <section aria-label="Theme" className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6">
+        <h2 className="mb-1 text-base font-semibold">Theme</h2>
+        <p className="mb-4 text-sm text-slate-500">
+          Controls how the public story looks. Without a theme, {SOFT_BLUSH.name} is used.{" "}
+          <Link href="/admin/themes" className="text-indigo-700 underline">Manage themes</Link>
+        </p>
+        <form action={assignBookThemeAction} className="flex flex-wrap items-center gap-2">
+          <input type="hidden" name="bookId" value={book.id} />
+          <label htmlFor="themeId" className="sr-only">Theme</label>
+          <select id="themeId" name="themeId" defaultValue={book.themeId ?? ""} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+            <option value="">{SOFT_BLUSH.name} (default)</option>
+            {themes.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+          <button type="submit" className={btnSecondary}>Apply theme</button>
         </form>
       </section>
 

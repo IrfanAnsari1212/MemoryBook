@@ -5,6 +5,7 @@ import { getOwnedBookOrNotFound } from "@/lib/books";
 import { getDb } from "@/lib/db";
 import { PageForm } from "@/components/admin/page-form";
 import { pageTypeSchema } from "@/lib/validations/page";
+import { resolveTheme } from "@/lib/themes/resolve";
 
 export const metadata: Metadata = { title: "Add Page" };
 
@@ -18,6 +19,7 @@ export default async function NewPagePage({ params, searchParams }: PageProps<"/
     select: { id: true, url: true, alt: true, originalFilename: true, width: true, height: true },
   });
   const t = pageTypeSchema.safeParse((await searchParams).type);
+  const theme = resolveTheme(book.themeId ? await getDb().theme.findFirst({ where: { id: book.themeId } }) : null);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -31,6 +33,7 @@ export default async function NewPagePage({ params, searchParams }: PageProps<"/
         bookId={book.id}
         media={media}
         initialType={t.success ? t.data : undefined}
+        themeDefaults={{ transition: theme.defaultTransition, photoLayout: theme.defaultPhotoLayout }}
         cancelHref={`/admin/books/${book.id}/pages`}
       />
     </div>

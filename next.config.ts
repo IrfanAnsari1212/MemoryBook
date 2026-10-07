@@ -24,7 +24,11 @@ const nextConfig: NextConfig = {
     proxyClientMaxBodySize: SERVER_ACTION_BODY_LIMIT,
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // Personal memory books must never be indexed, whatever the page metadata says.
+      { source: "/m/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }] },
+    ];
   },
 };
 

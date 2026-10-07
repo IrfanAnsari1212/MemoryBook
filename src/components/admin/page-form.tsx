@@ -60,11 +60,17 @@ function CountedTextarea({ id, name, defaultValue, max, rows, invalid }: {
   );
 }
 
-export function PageForm({ mode, bookId, pageId, initial, initialType, media, cancelHref }: {
+export function PageForm({ mode, bookId, pageId, initial, initialType, themeDefaults, media, cancelHref }: {
   mode: "create" | "edit"; bookId: string; pageId?: string; initial?: PageFormValues; initialType?: PageType;
+  /** The book theme's default transition / photo layout, used for new pages. */
+  themeDefaults?: { transition: string; photoLayout: string };
   media: MediaOption[]; cancelHref: string;
 }) {
-  initial ??= { ...EMPTY_PAGE, ...(initialType ? { type: initialType } : {}) };
+  initial ??= {
+    ...EMPTY_PAGE,
+    ...(initialType ? { type: initialType } : {}),
+    ...(themeDefaults ? { transition: themeDefaults.transition, photoLayout: themeDefaults.photoLayout } : {}),
+  };
   const [state, formAction, pending] = useActionState<PageFormState, FormData>(
     mode === "create" ? createPageAction : updatePageAction, {},
   );
