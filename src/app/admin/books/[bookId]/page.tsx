@@ -101,6 +101,7 @@ export default async function BookDetailPage({ params }: PageProps<"/admin/books
             <Link href={`/admin/books/${book.id}/pages/new`} className={btnPrimary}>Add Page</Link>
             <Link href={`/admin/books/${book.id}/pages`} className={btnSecondary}>Manage Pages</Link>
             <Link href={`/admin/books/${book.id}/media`} className={btnSecondary}>Media Library</Link>
+            <Link href={`/admin/books/${book.id}/music`} className={btnSecondary}>Music</Link>
           </div>
         </div>
         {firstPages.length > 0 && (

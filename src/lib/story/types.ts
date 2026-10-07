@@ -29,6 +29,9 @@ export type StoryPage = {
 /** A validated, safe theme (see lib/themes). Never raw database values. */
 export type StoryTheme = ResolvedTheme;
 
+/** Optional background track. Only a validated Cloudinary audio URL ever reaches here. */
+export type StoryMusic = { url: string; mime: string | null; title: string; volume: number; loop: boolean };
+
 export type PublicStory = {
   book: {
     title: string;
@@ -37,5 +40,7 @@ export type PublicStory = {
     cover: { title: string; subtitle: string | null; dateLabel: string | null };
     theme: StoryTheme;
   };
+  /** null when the book has no (enabled, playable) music. */
+  music: StoryMusic | null;
   pages: StoryPage[];
 };

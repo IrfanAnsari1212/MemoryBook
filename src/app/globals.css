@@ -338,3 +338,30 @@ body {
 .story-preview .story-title { font-size: 2rem; }
 .story-preview .story-title-xl { font-size: 2.6rem; }
 .story-preview .story-prose, .story-preview .story-prose-letter { font-size: 1rem; }
+
+/* ── music control: small, theme-colored, state shown by icon shape AND text (not color alone) ── */
+.story-music {
+  position: fixed;
+  top: max(0.75rem, env(safe-area-inset-top));
+  right: max(0.75rem, env(safe-area-inset-right));
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--story-fg2);
+  background: color-mix(in srgb, var(--story-card) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--story-accent) 28%, transparent);
+  backdrop-filter: blur(6px);
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.story-music:hover { color: var(--story-fg); border-color: color-mix(in srgb, var(--story-accent) 55%, transparent); }
+.story-music[aria-pressed="true"] { color: var(--story-fg); }
+/* leave room under the control so it never covers the first lines of a page */
+.story-has-music { padding-top: max(4rem, calc(env(safe-area-inset-top) + 3.4rem)); }

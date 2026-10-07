@@ -6,6 +6,9 @@ import { SLUG_PATTERN } from "@/lib/validations/book";
 import { PUBLIC_STATUS, PUBLIC_VISIBILITIES } from "./config";
 import { isAllowedImageUrl, normalizePhotoLayout, normalizeTransition } from "./normalize";
 import { resolveTheme } from "@/lib/themes/resolve";
+import { getEnv } from "@/lib/env";
+import { clampVolume } from "@/lib/music/config";
+import { audioMimeFromUrl, isAllowedAudioUrl } from "@/lib/music/url";
 import type { PublicStory, StoryPage } from "./types";
 
 /**
@@ -26,6 +29,7 @@ export const getPublicStory = cache(async (slug: string): Promise<PublicStory | 
       coverTitle: true,
       coverSubtitle: true,
       date: true,
+      music: { select: { name: true, url: true, enabled: true, volume: true, loop: true } },
       theme: { select: { name: true, background: true, foreground: true, accent: true, card: true, headingFont: true, bodyFont: true, accentFont: true, config: true } },
       pages: {
         where: { published: true },
@@ -68,6 +72,13 @@ export const getPublicStory = cache(async (slug: string): Promise<PublicStory | 
     };
   });
 
+  // Music is exposed only when enabled AND its URL still passes the strict Cloudinary-audio allowlist.
+  const m = book.music;
+  const music =
+    m && m.enabled && isAllowedAudioUrl(m.url, getEnv().CLOUDINARY_CLOUD_NAME)
+      ? { url: m.url, mime: audioMimeFromUrl(m.url) ?? null, title: m.name, volume: clampVolume(m.volume), loop: m.loop === true }
+      : null;
+
   const dateLabel = book.date
     ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(book.date)
     : null;
@@ -79,6 +90,7 @@ export const getPublicStory = cache(async (slug: string): Promise<PublicStory | 
       cover: { title: book.coverTitle, subtitle: book.coverSubtitle, dateLabel },
       theme,
     },
+    music,
     pages,
   };
 });

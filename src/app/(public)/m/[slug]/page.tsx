@@ -36,6 +36,7 @@ export default async function PublicStoryPage({ params }: PageProps<"/m/[slug]">
       cover={story.book.cover}
       transitions={story.pages.map((p) => p.transition)}
       openTransition={theme.defaultTransition}
+      music={story.music}
       style={style}
       texture={theme.texture}
     >

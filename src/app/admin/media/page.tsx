@@ -12,7 +12,7 @@ export default async function MediaIndexPage() {
   const books = await getDb().memoryBook.findMany({
     where: { ownerId: user.id, status: { not: "ARCHIVED" } },
     orderBy: { updatedAt: "desc" },
-    select: { id: true, title: true, _count: { select: { media: true } } },
+    select: { id: true, title: true, _count: { select: { media: { where: { type: "IMAGE" } } } } },
   });
 
   return (

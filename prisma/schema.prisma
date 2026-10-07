@@ -201,16 +201,18 @@ model Theme {
 }
 
 model Music {
-  id        String   @id @default(cuid())
-  bookId    String   @unique
-  name      String
-  url       String
-  mediaId   String?
-  enabled   Boolean  @default(true)
-  volume    Float    @default(0.5) // 0..1
-  loop      Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String   @id @default(cuid())
+  bookId          String   @unique
+  name            String
+  artist          String?
+  durationSeconds Int?
+  url             String
+  mediaId         String?
+  enabled         Boolean  @default(true)
+  volume          Float    @default(0.5) // 0..1
+  loop            Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   book  MemoryBook @relation(fields: [bookId], references: [id], onDelete: Cascade)
   media Media?     @relation(fields: [mediaId], references: [id], onDelete: SetNull)

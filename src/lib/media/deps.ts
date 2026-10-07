@@ -17,7 +17,7 @@ export function deleteDeps(ownerId: string, bookId: string, mediaId: string): De
   return {
     findOwned: () =>
       db.media.findFirst({
-        where: { id: mediaId, bookId, book: { ownerId } },
+        where: { id: mediaId, bookId, type: "IMAGE", book: { ownerId } },
         select: { id: true, bookId: true, publicId: true },
       }),
     findUsage: async (id) => {

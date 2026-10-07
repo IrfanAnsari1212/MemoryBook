@@ -4,6 +4,7 @@ import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from "
 import { Children, useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode, type TouchEvent } from "react";
 import type { TransitionType } from "@/generated/prisma/enums";
 import { canGoNext, canGoPrev, clampIndex, keyDelta, swipeDelta } from "@/lib/story/navigation";
+import type { StoryMusic } from "@/lib/story/types";
 import { Cover, type CoverContent } from "./cover";
 import { REDUCED_VARIANTS, TRANSITION_VARIANTS } from "./motion";
 
@@ -15,6 +16,8 @@ type Props = {
   transitions: TransitionType[];
   /** Transition used when the cover gives way to the story (the theme's default). */
   openTransition: TransitionType;
+  /** Optional background music. Never played before the reader taps Open. */
+  music?: StoryMusic | null;
   style?: CSSProperties;
   texture: string;
   /** One server-rendered element per published page. Only the current one is mounted. */
@@ -31,7 +34,7 @@ const Arrow = ({ dir }: { dir: "left" | "right" }) => (
  * The only client component of the story. The server loads the story once and renders every page;
  * this shell shows the cover, then mounts one page at a time. Navigation never hits the network.
  */
-export function StoryViewer({ title, recipient, cover, transitions, openTransition, style, texture, children }: Props) {
+export function StoryViewer({ title, recipient, cover, transitions, openTransition, music = null, style, texture, children }: Props) {
   const pages = Children.toArray(children);
   const total = pages.length;
   const reduced = useReducedMotion();
@@ -40,6 +43,35 @@ export function StoryViewer({ title, recipient, cover, transitions, openTransiti
   const { index, dir } = view;
   const touch = useRef<{ x: number; y: number } | null>(null);
   const mainRef = useRef<HTMLElement>(null);
+
+  // Music lives at viewer level (outside the animated page area), so changing pages never remounts or restarts it.
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [musicBroken, setMusicBroken] = useState(false);
+
+  // Always called from a user gesture (the Open click / key press). A rejected play() (browser policy,
+  // decode error...) is swallowed: the story keeps working and the control simply shows "Music off".
+  const requestPlay = useCallback(() => {
+    const a = audioRef.current;
+    if (!a) return;
+    try {
+      const p = a.play();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    } catch {
+      /* ignore: music is an enhancement */
+    }
+  }, []);
+
+  const toggleMusic = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    if (a.paused) requestPlay();
+    else a.pause();
+  };
+
+  useEffect(() => {
+    if (audioRef.current && music) audioRef.current.volume = music.volume;
+  }, [music]);
 
   const go = useCallback(
     (delta: 1 | -1) =>
@@ -53,7 +85,8 @@ export function StoryViewer({ title, recipient, cover, transitions, openTransiti
   const open = useCallback(() => {
     setView({ index: 0, dir: 1 });
     setOpened(true);
-  }, []);
+    requestPlay(); // music begins only now, from the user's explicit Open
+  }, [requestPlay]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -108,7 +141,7 @@ export function StoryViewer({ title, recipient, cover, transitions, openTransiti
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
           onTouchCancel={() => (touch.current = null)}
-          className="story-stage"
+          className={`story-stage ${music && opened && !musicBroken ? "story-has-music" : ""}`}
         >
           <AnimatePresence mode="wait" initial={false} custom={dir}>
             {!opened ? (
@@ -137,6 +170,36 @@ export function StoryViewer({ title, recipient, cover, transitions, openTransiti
             )}
           </AnimatePresence>
         </main>
+
+        {music && !musicBroken && (
+          <audio
+            ref={audioRef}
+            src={music.url}
+            loop={music.loop}
+            preload="none"
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+            onEnded={() => setPlaying(false)}
+            onError={() => { setPlaying(false); setMusicBroken(true); }}
+          />
+        )}
+
+        {music && !musicBroken && opened && (
+          <button type="button" className="story-music" aria-pressed={playing} aria-label="Music" onClick={toggleMusic}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4z" />
+              {playing ? (
+                <>
+                  <path d="M15.5 9a4 4 0 0 1 0 6" />
+                  <path d="M18 6.5a7.5 7.5 0 0 1 0 11" />
+                </>
+              ) : (
+                <path d="M16 9.5l5 5M21 9.5l-5 5" />
+              )}
+            </svg>
+            <span className="story-music-label" aria-hidden="true">{playing ? "On" : "Off"}</span>
+          </button>
+        )}
 
         {opened && (
           <nav aria-label="Story navigation" className="story-nav">
