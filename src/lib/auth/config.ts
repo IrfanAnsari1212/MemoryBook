@@ -13,7 +13,8 @@ export const authConfig = {
     // Optimistic gate used by proxy.ts. Real authorization is re-checked
     // server-side (against the DB) in requireAdmin().
     authorized({ auth, request }) {
-      if (request.nextUrl.pathname.startsWith("/admin")) return !!auth?.user;
+      const p = request.nextUrl.pathname;
+      if (p.startsWith("/admin") || p.startsWith("/preview")) return !!auth?.user;
       return true;
     },
     jwt({ token, user }) {

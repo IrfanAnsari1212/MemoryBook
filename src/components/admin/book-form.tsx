@@ -70,7 +70,7 @@ export function BookForm({
         <h2 className="text-base font-semibold">Details</h2>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="md:col-span-2">
-            <Field id="title" label="Book name" error={err("title")}>
+            <Field id="title" label="Book name" error={err("title")} hint="Your own name for this book. It is shown in the admin and as the browser tab title.">
               <input
                 {...props("title")}
                 type="text"
@@ -84,16 +84,16 @@ export function BookForm({
               />
             </Field>
           </div>
-          <Field id="recipientName" label="Recipient name" error={err("recipientName")}>
+          <Field id="recipientName" label="Recipient name" error={err("recipientName")} hint="Who the book is for.">
             <input {...props("recipientName")} type="text" required maxLength={80} defaultValue={v.recipientName} />
           </Field>
-          <Field id="senderName" label="Sender name" error={err("senderName")}>
+          <Field id="senderName" label="Sender name" error={err("senderName")} hint="Who it is from.">
             <input {...props("senderName")} type="text" required maxLength={80} defaultValue={v.senderName} />
           </Field>
-          <Field id="occasion" label="Occasion" error={err("occasion")}>
+          <Field id="occasion" label="Occasion" error={err("occasion")} hint="For example: Birthday, Anniversary.">
             <input {...props("occasion")} type="text" required maxLength={80} defaultValue={v.occasion} />
           </Field>
-          <Field id="date" label="Date" error={err("date")}>
+          <Field id="date" label="Date" error={err("date")} hint="The date of the occasion, shown on the cover.">
             <input {...props("date")} type="date" required defaultValue={v.date} />
           </Field>
           <div className="md:col-span-2">
@@ -101,7 +101,7 @@ export function BookForm({
               id="slug"
               label="Slug"
               error={err("slug")}
-              hint="Used in the link: /m/your-slug. Lowercase letters, numbers and hyphens."
+              hint="Unique short name for the public address /m/your-slug. Filled in from the book name; lowercase letters, numbers and hyphens."
             >
               <input
                 {...props("slug")}
@@ -128,7 +128,7 @@ export function BookForm({
           <Field id="coverTitle" label="Cover title" optional error={err("coverTitle")} hint="Defaults to “For {recipient}”.">
             <input {...props("coverTitle")} type="text" maxLength={160} defaultValue={v.coverTitle} />
           </Field>
-          <Field id="coverSubtitle" label="Cover subtitle" optional error={err("coverSubtitle")}>
+          <Field id="coverSubtitle" label="Cover subtitle" optional error={err("coverSubtitle")} hint="A short line under the cover title.">
             <input {...props("coverSubtitle")} type="text" maxLength={240} defaultValue={v.coverSubtitle} />
           </Field>
         </div>
@@ -144,7 +144,7 @@ export function BookForm({
               ))}
             </select>
           </Field>
-          <Field id="status" label="Status" error={err("status")}>
+          <Field id="status" label="Status" error={err("status")} hint="Draft books are visible only to you. Keep it as Draft while you add pages, then publish from the book page.">
             <select {...props("status")} defaultValue={v.status}>
               {statuses.map((o) => (
                 <option key={o} value={o}>{STATUS_LABEL[o]}</option>

@@ -9,24 +9,21 @@ import { setBookVisibilityAction } from "@/actions/books";
 import { assignBookThemeAction } from "@/actions/themes";
 import { SOFT_BLUSH } from "@/lib/themes/defaults";
 import { Visibility } from "@/generated/prisma/enums";
+import { buildChecklist } from "@/lib/books/checklist";
 import { ArchiveButton } from "@/components/admin/archive-button";
 import { StatusActionButton } from "@/components/admin/status-form";
 import {
-  StatusBadge, VISIBILITY_HELP, VISIBILITY_LABEL, VisibilityBadge, btnPrimary, btnSecondary,
+  STATUS_LABEL, StatusBadge, VISIBILITY_HELP, VISIBILITY_LABEL, VisibilityBadge, btnPrimary, btnSecondary,
 } from "@/components/admin/book-ui";
 
 export const metadata: Metadata = { title: "Memory Book" };
-
-const LATER = [
-  { label: "Preview", module: 6 },
-  { label: "Share", module: 9 },
-];
 
 export default async function BookDetailPage({ params }: PageProps<"/admin/books/[bookId]">) {
   const user = await requireAdmin();
   const book = await getOwnedBookOrNotFound(user.id, (await params).bookId);
 
-  const [total, published, firstPages] = await Promise.all([
+  const now = new Date();
+  const [total, published, firstPages, images, music, activeLinks, photoNoImage] = await Promise.all([
     getDb().memoryPage.count({ where: { bookId: book.id } }),
     getDb().memoryPage.count({ where: { bookId: book.id, published: true } }),
     getDb().memoryPage.findMany({
@@ -35,6 +32,10 @@ export default async function BookDetailPage({ params }: PageProps<"/admin/books
       take: 5,
       select: { id: true, order: true, type: true, title: true, published: true },
     }),
+    getDb().media.count({ where: { bookId: book.id, type: "IMAGE" } }),
+    getDb().music.findUnique({ where: { bookId: book.id }, select: { name: true, enabled: true } }),
+    getDb().shareLink.count({ where: { bookId: book.id, revokedAt: null, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] } }),
+    getDb().memoryPage.count({ where: { bookId: book.id, type: "PHOTO", mediaId: null } }),
   ]);
 
   const themes = await getDb().theme.findMany({
@@ -42,6 +43,31 @@ export default async function BookDetailPage({ params }: PageProps<"/admin/books
     orderBy: { name: "asc" },
     select: { id: true, name: true },
   });
+
+  const themeName = themes.find((t) => t.id === book.themeId)?.name ?? SOFT_BLUSH.name;
+  const checklist = buildChecklist({
+    details: {
+      title: book.title, recipientName: book.recipientName, senderName: book.senderName, occasion: book.occasion,
+      slug: book.slug, coverTitle: book.coverTitle, hasDate: !!book.date,
+    },
+    status: book.status,
+    pages: { total, published },
+    photoPagesWithoutImage: photoNoImage,
+    themeName,
+    music: { configured: !!music, enabled: !!music?.enabled },
+    activeShareLinks: activeLinks,
+  });
+  const doneCount = checklist.filter((c) => c.done).length;
+  const base = `/admin/books/${book.id}`;
+  const workspace: Array<{ label: string; href: string; hint: string }> = [
+    { label: "Edit book", href: `${base}/edit`, hint: "Names, date, cover, slug" },
+    { label: "Pages", href: `${base}/pages`, hint: "Add, order and publish pages" },
+    { label: "Media library", href: `${base}/media`, hint: "Upload and reuse images" },
+    { label: "Music", href: `${base}/music`, hint: "Optional background track" },
+    { label: "Theme", href: "#theme", hint: "Colours, fonts and style" },
+    { label: "Preview", href: `/preview/${book.id}`, hint: "See it as the owner, drafts included" },
+    { label: "Share", href: `${base}/share`, hint: "Private links for the recipient" },
+  ];
 
   const rows: Array<[string, string]> = [
     ["Recipient", book.recipientName],
@@ -77,6 +103,60 @@ export default async function BookDetailPage({ params }: PageProps<"/admin/books
         </div>
       </div>
 
+      <nav aria-label="Workspace" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {workspace.map((w) => (
+          <Link
+            key={w.label}
+            href={w.href}
+            {...(w.label === "Preview" ? { target: "_blank", rel: "noopener" } : {})}
+            className="rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-indigo-300 hover:bg-indigo-50/40"
+          >
+            <span className="block text-sm font-semibold text-slate-900">{w.label}{w.label === "Preview" ? " ↗" : ""}</span>
+            <span className="mt-1 block text-xs text-slate-500">{w.hint}</span>
+          </Link>
+        ))}
+      </nav>
+
+      <section aria-label="Status" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          ["Pages", `${total} total`, `${published} published · ${total - published} ${total - published === 1 ? "draft" : "drafts"}`],
+          ["Media", `${images} ${images === 1 ? "image" : "images"}`, "in this book’s library"],
+          ["Music", music ? (music.enabled ? "Enabled" : "Disabled") : "Not set", "optional"],
+          ["Book", STATUS_LABEL[book.status], `${VISIBILITY_LABEL[book.visibility]} · ${activeLinks} active ${activeLinks === 1 ? "link" : "links"}`],
+        ].map(([k, v, sub]) => (
+          <div key={k} className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="text-xs text-slate-500">{k}</div>
+            <div className="mt-0.5 text-lg font-semibold">{v}</div>
+            <div className="text-xs text-slate-500">{sub}</div>
+          </div>
+        ))}
+      </section>
+
+      <section aria-label="Production checklist" className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6">
+        <h2 className="text-base font-semibold">Production checklist</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          {doneCount} of {checklist.length} done. This is a guide only; nothing here stops you from publishing.
+        </p>
+        <ul className="mt-4 space-y-2">
+          {checklist.map((c) => (
+            <li key={c.key} className="flex items-start gap-3 text-sm" data-check={c.key} data-done={c.done}>
+              <span
+                aria-hidden="true"
+                className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs ${c.done ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-400"}`}
+              >
+                {c.done ? "✓" : ""}
+              </span>
+              <span>
+                <span className="font-medium text-slate-900">{c.label}</span>
+                {c.optional && <span className="text-slate-400"> (optional)</span>}
+                <span className="sr-only">{c.done ? " — done" : " — not done"}</span>
+                <span className="block text-xs text-slate-500">{c.note}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <section className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6">
         <h2 className="mb-4 text-base font-semibold">Details</h2>
         <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
@@ -100,8 +180,6 @@ export default async function BookDetailPage({ params }: PageProps<"/admin/books
           <div className="flex flex-wrap gap-2">
             <Link href={`/admin/books/${book.id}/pages/new`} className={btnPrimary}>Add Page</Link>
             <Link href={`/admin/books/${book.id}/pages`} className={btnSecondary}>Manage Pages</Link>
-            <Link href={`/admin/books/${book.id}/media`} className={btnSecondary}>Media Library</Link>
-            <Link href={`/admin/books/${book.id}/music`} className={btnSecondary}>Music</Link>
           </div>
         </div>
         {firstPages.length > 0 && (
@@ -143,7 +221,7 @@ export default async function BookDetailPage({ params }: PageProps<"/admin/books
         </form>
       </section>
 
-      <section aria-label="Theme" className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6">
+      <section id="theme" aria-label="Theme" className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6">
         <h2 className="mb-1 text-base font-semibold">Theme</h2>
         <p className="mb-4 text-sm text-slate-500">
           Controls how the public story looks. Without a theme, {SOFT_BLUSH.name} is used.{" "}
@@ -162,14 +240,6 @@ export default async function BookDetailPage({ params }: PageProps<"/admin/books
         </form>
       </section>
 
-      <section aria-label="Upcoming features" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {LATER.map((l) => (
-          <div key={l.label} className="rounded-2xl border border-dashed border-slate-300 bg-white p-4">
-            <div className="text-sm font-medium text-slate-900">{l.label}</div>
-            <div className="mt-1 text-xs text-slate-500">Coming in Module {l.module}</div>
-          </div>
-        ))}
-      </section>
     </div>
   );
 }

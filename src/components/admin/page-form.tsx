@@ -21,6 +21,11 @@ const EMPTY_PAGE: PageFormValues = {
   photoLayout: DEFAULT_PHOTO_LAYOUT, transition: DEFAULT_TRANSITION, published: true,
 };
 
+const FIELD_LABEL = {
+  title: "title", subtitle: "subtitle", body: "body text", caption: "caption", media: "an image",
+  photoLayout: "a photo layout", signature: "a signature",
+} as const;
+
 const input = "w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2";
 const ok = "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500/30";
 const bad = "border-red-400 focus:border-red-500 focus:ring-red-500/30";
@@ -117,6 +122,9 @@ export function PageForm({ mode, bookId, pageId, initial, initialType, themeDefa
 
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 md:p-6">
         <h2 className="text-base font-semibold">Content</h2>
+        <p className="text-xs text-slate-500" data-type-fields>
+          A {def.label} page uses: {def.fields.map((f) => FIELD_LABEL[f]).join(", ")}.
+        </p>
         {has("title") && (
           <Field id="title" label="Title" optional error={err("title")}>
             <input {...p("title")} type="text" maxLength={LIMITS.title} defaultValue={v.title} />
@@ -163,18 +171,19 @@ export function PageForm({ mode, bookId, pageId, initial, initialType, themeDefa
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 md:p-6">
         <h2 className="text-base font-semibold">Display</h2>
         <div className="grid gap-4 md:grid-cols-2">
-          <Field id="transition" label="Transition" error={err("transition")} hint="Stored now; animated in the public story later.">
+          <Field id="transition" label="Transition" error={err("transition")} hint="How the story animates into this page.">
             <select {...p("transition")} defaultValue={v.transition}>
               {Object.values(TransitionType).map((t) => (
                 <option key={t} value={t}>{TRANSITION_LABEL[t]}</option>
               ))}
             </select>
           </Field>
-          <div className="flex items-end">
+          <div className="flex flex-col justify-end gap-1">
             <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
               <input type="checkbox" name="published" defaultChecked={v.published} className="h-4 w-4 rounded border-slate-300 text-indigo-600" />
               Published
             </label>
+            <p className="text-xs text-slate-500">Unpublished pages are drafts: visitors don&rsquo;t see them, but you do in Preview.</p>
           </div>
         </div>
       </section>

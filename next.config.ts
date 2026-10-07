@@ -28,6 +28,23 @@ const nextConfig: NextConfig = {
       { source: "/:path*", headers: securityHeaders },
       // Personal memory books must never be indexed, whatever the page metadata says.
       { source: "/m/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }] },
+      // Owner preview includes draft pages: never indexed, never cached.
+      {
+        source: "/preview/:path*",
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+        ],
+      },
+      // Share links carry a secret in the URL: never indexed, never cached, and never sent along as a Referer.
+      {
+        source: "/s/:path*",
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+        ],
+      },
     ];
   },
 };

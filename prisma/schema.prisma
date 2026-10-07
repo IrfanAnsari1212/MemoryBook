@@ -223,12 +223,16 @@ model Music {
 model ShareLink {
   id        String    @id @default(cuid())
   bookId    String
-  token     String    @unique // high-entropy random, generated server-side
-  active    Boolean   @default(true)
+  /// SHA-256 (hex) of the share token. The raw token is shown once at creation and never stored.
+  tokenHash String    @unique
+  label     String?
   expiresAt DateTime?
+  /// Set when the owner revokes the link. Rows are kept (not deleted) so the history stays visible.
+  revokedAt DateTime?
   createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
 
   book MemoryBook @relation(fields: [bookId], references: [id], onDelete: Cascade)
 
-  @@index([bookId, active])
+  @@index([bookId, revokedAt])
 }

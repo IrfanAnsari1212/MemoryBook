@@ -31,6 +31,12 @@ export default async function MediaPage({ params }: PageProps<"/admin/books/[boo
         <p className="mt-1 text-sm text-slate-500">
           {media.length} {media.length === 1 ? "image" : "images"}. Upload here, then pick images when editing pages.
         </p>
+        <ol className="mt-3 list-inside list-decimal space-y-1 text-sm text-slate-600">
+          <li>Upload images below. They belong to this book only.</li>
+          <li>Open a page and choose an image from this library.</li>
+          <li>The same image can be used on several pages.</li>
+          <li>An image that a page uses can&rsquo;t be deleted. Remove it from those pages first.</li>
+        </ol>
       </div>
 
       <MediaUploader bookId={book.id} />

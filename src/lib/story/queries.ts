@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { getDb } from "@/lib/db";
 import { PAGE_TYPES, readConfig } from "@/lib/pages/registry";
-import { SLUG_PATTERN } from "@/lib/validations/book";
+import { SLUG_PATTERN, idSchema } from "@/lib/validations/book";
 import { PUBLIC_STATUS, PUBLIC_VISIBILITIES } from "./config";
 import { isAllowedImageUrl, normalizePhotoLayout, normalizeTransition } from "./normalize";
 import { resolveTheme } from "@/lib/themes/resolve";
@@ -10,18 +10,18 @@ import { getEnv } from "@/lib/env";
 import { clampVolume } from "@/lib/music/config";
 import { audioMimeFromUrl, isAllowedAudioUrl } from "@/lib/music/url";
 import type { PublicStory, StoryPage } from "./types";
+import type { Prisma } from "@/generated/prisma/client";
+import { hashShareToken, isWellFormedShareToken } from "@/lib/share/token";
 
 /**
- * Load a story for public viewing, or null if it may not be shown. Eligibility is enforced IN the
- * query (published + public/unlisted), so ineligible books never leave the database. One query
- * loads the book, its published pages (ordered by `order`) and each page's media.
- * Wrapped in React `cache` so generateMetadata and the page share one lookup per request.
+ * The single story loader behind every public entry point (/m/[slug] and /s/[token]). The caller supplies
+ * the ACCESS rule as a `where`; everything about what gets rendered (published pages in order, media owned
+ * by this book, theme, music, cover) is decided here, once, so both routes return the same normalized
+ * PublicStory. Ineligible books never leave the database because eligibility is part of the query.
  */
-export const getPublicStory = cache(async (slug: string): Promise<PublicStory | null> => {
-  if (slug.length > 80 || !SLUG_PATTERN.test(slug)) return null;
-
+async function loadStory(where: Prisma.MemoryBookWhereInput, opts: { includeUnpublishedPages?: boolean } = {}): Promise<PublicStory | null> {
   const book = await getDb().memoryBook.findFirst({
-    where: { slug, status: PUBLIC_STATUS, visibility: { in: [...PUBLIC_VISIBILITIES] } },
+    where,
     select: {
       id: true,
       title: true,
@@ -32,7 +32,8 @@ export const getPublicStory = cache(async (slug: string): Promise<PublicStory | 
       music: { select: { name: true, url: true, enabled: true, volume: true, loop: true } },
       theme: { select: { name: true, background: true, foreground: true, accent: true, card: true, headingFont: true, bodyFont: true, accentFont: true, config: true } },
       pages: {
-        where: { published: true },
+        // Public callers never pass the option, so only published pages can ever be read for them.
+        where: opts.includeUnpublishedPages ? {} : { published: true },
         orderBy: { order: "asc" },
         select: {
           type: true,
@@ -93,4 +94,42 @@ export const getPublicStory = cache(async (slug: string): Promise<PublicStory | 
     music,
     pages,
   };
+}
+
+/**
+ * /m/[slug]: the book must be PUBLISHED and PUBLIC or UNLISTED (PRIVATE, DRAFT, ARCHIVED are never public).
+ * React `cache` lets generateMetadata and the page share one lookup per request.
+ */
+export const getPublicStory = cache(async (slug: string): Promise<PublicStory | null> => {
+  if (slug.length > 80 || !SLUG_PATTERN.test(slug)) return null;
+  return loadStory({ slug, status: PUBLIC_STATUS, visibility: { in: [...PUBLIC_VISIBILITIES] } });
 });
+
+/**
+ * /s/[token]: possession of a valid token is the access mechanism, so visibility is NOT checked (a PRIVATE
+ * or UNLISTED book can be shared). Publication still is: DRAFT and ARCHIVED books stay unreachable, and the
+ * link itself must be neither revoked nor expired. The raw token is hashed immediately; the lookup is a
+ * single indexed equality on the hash, scoped to the link's own book, so a token can never resolve a
+ * different book. Every failure (malformed, unknown, revoked, expired, unpublished) is the same `null`.
+ */
+export const getSharedStory = cache(async (token: string): Promise<PublicStory | null> => {
+  if (!isWellFormedShareToken(token)) return null;
+  const now = new Date(); // UTC instant
+  return loadStory({
+    status: PUBLIC_STATUS,
+    shareLinks: {
+      some: { tokenHash: hashShareToken(token), revokedAt: null, OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+    },
+  });
+});
+
+/**
+ * Owner preview (/preview/[bookId]): the book must belong to `ownerId` (anyone else gets null, same as a
+ * missing book). Status and visibility are ignored and draft pages ARE included, so the owner can see the
+ * book as it will look once everything is published. Only the admin preview route calls this; it is never
+ * reachable from /m or /s, and it changes nothing about what those routes expose.
+ */
+export async function getOwnerPreviewStory(ownerId: string, bookId: string): Promise<PublicStory | null> {
+  if (!idSchema.safeParse(bookId).success) return null;
+  return loadStory({ id: bookId, ownerId }, { includeUnpublishedPages: true });
+}
