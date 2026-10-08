@@ -30,3 +30,16 @@ Notes
 - Sessions are JWTs in an httpOnly cookie (7 days). Every admin request is
   re-checked against the database, so deleting or demoting the user locks them
   out immediately. Changing `AUTH_SECRET` signs everyone out.
+
+## Forgot your email or password
+
+1. From your machine (with `.env` pointing at the database), run `npm run admin:recovery-key`.
+   It needs no email or password and prints a recovery key once. Save it in a password manager.
+2. Open `/forgot-password`, enter the key and choose a new email and password (12+ characters).
+   The key is single-use: a replacement is shown once on success.
+3. While signed in, you can also create or replace the key under Admin → Settings → Recovery key
+   (asks for your current password).
+
+Only a SHA-256 hash of the key is stored. Anyone holding the key can take over the admin account, so
+keep it private. `npm run admin:reset` is still available to set a new password for a known email.
+Existing sessions stay valid until they expire (7 days) or `AUTH_SECRET` is changed.

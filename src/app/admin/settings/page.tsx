@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth/session";
 import { getEnv } from "@/lib/env";
+import { getDb } from "@/lib/db";
+import { RecoveryKeySection } from "@/components/admin/recovery-key-section";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -17,6 +19,7 @@ const STEPS: Array<[string, string]> = [
 
 export default async function SettingsPage() {
   const user = await requireAdmin();
+  const hasKey = !!(await getDb().user.findUnique({ where: { id: user.id }, select: { recoveryKeyHash: true } }))?.recoveryKeyHash;
   const origin = new URL(getEnv().NEXT_PUBLIC_APP_URL).origin;
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -29,6 +32,7 @@ export default async function SettingsPage() {
         </dl>
         <p className="mt-3 text-xs text-slate-500">The link address comes from the server configuration and is not editable here.</p>
       </section>
+      <RecoveryKeySection hasKey={hasKey} />
       <section className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6">
         <h2 className="mb-3 text-base font-semibold">How to make a memory book</h2>
         <ol className="space-y-3">
